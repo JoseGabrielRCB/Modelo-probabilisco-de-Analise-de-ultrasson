@@ -10,7 +10,7 @@ e os três pontos de operação marcados (0,5 / Youden congelado / sensibilidade
 congelada).
 
 Uso:
-    python src/relatorio_breast.py
+    python src/protocolo_c/relatorio_breast.py
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 
-RAIZ_CODIGO = Path(__file__).resolve().parents[1]   # .../TCC-Ultrassom/03-codigo
+RAIZ_CODIGO = Path(__file__).resolve().parents[2]   # .../TCC-Ultrassom/03-codigo
 
 ENTRADA_MD = RAIZ_CODIGO / "resultados" / "breast" / "metricas_breast.md"
 ENTRADA_ROC = RAIZ_CODIGO / "resultados" / "breast" / "roc_breast.csv"

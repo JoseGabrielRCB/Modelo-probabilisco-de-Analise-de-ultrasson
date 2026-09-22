@@ -19,7 +19,7 @@ Verificação que só reporta (não trava):
     (d) balanço de classes (proporção de malignas) por fold.
 
 Uso:
-    python src/verificar.py
+    python src/comum/verificar.py
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ from PIL import Image
 # Caminhos — tudo derivado da posição deste arquivo (ver indexar.py).
 # ---------------------------------------------------------------------------
 
-RAIZ_CODIGO = Path(__file__).resolve().parents[1]   # .../TCC-Ultrassom/03-codigo
+RAIZ_CODIGO = Path(__file__).resolve().parents[2]   # .../TCC-Ultrassom/03-codigo
 RAIZ_TCC = RAIZ_CODIGO.parent                       # .../TCC-Ultrassom
 
 ENTRADA = RAIZ_CODIGO / "dados_processados" / "indice_particionado.csv"

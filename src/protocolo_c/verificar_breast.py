@@ -21,7 +21,7 @@ Verificação que só reporta (não trava):
     (d) balanço de classes do BrEaST.
 
 Uso:
-    python src/verificar_breast.py
+    python src/protocolo_c/verificar_breast.py
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ from pathlib import Path
 import pandas as pd
 from PIL import Image
 
-RAIZ_CODIGO = Path(__file__).resolve().parents[1]   # .../TCC-Ultrassom/03-codigo
+RAIZ_CODIGO = Path(__file__).resolve().parents[2]   # .../TCC-Ultrassom/03-codigo
 RAIZ_TCC = RAIZ_CODIGO.parent                       # .../TCC-Ultrassom
 
 ENTRADA = RAIZ_CODIGO / "dados_processados" / "breast" / "indice_breast.csv"

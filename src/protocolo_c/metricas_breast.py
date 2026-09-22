@@ -32,7 +32,7 @@ Escreve:
     - `resultados/breast/roc_breast.csv`
 
 Uso:
-    python src/metricas_breast.py
+    python src/protocolo_c/metricas_breast.py
 """
 
 from __future__ import annotations
@@ -53,10 +53,17 @@ from sklearn.metrics import (
     roc_curve,
 )
 
-# Reaproveita a maquinaria de bootstrap/limiar de metricas.py — mesmo diretório src/, ver
-# docstring do módulo. `metricas.py` não é modificado por este import.
-from indexar import exigir
-from metricas import (
+# Reaproveita a maquinaria de bootstrap/limiar de metricas.py — pacote
+# `src/protocolo_ab/`, ver docstring do módulo. `metricas.py` não é modificado por
+# este import.
+#
+# Desde a reorganização de src/ por trilha (comum/, protocolo_ab/, protocolo_c/,
+# resnet/), os módulos reaproveitados ficam em outro pacote: `src/` entra no sys.path
+# para que o(s) import(s) abaixo funcionem rodando o script direto, de qualquer
+# diretório. Só muda onde o Python procura o módulo — nenhuma lógica é alterada.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # .../03-codigo/src
+from comum.indexar import exigir
+from protocolo_ab.metricas import (
     N_BOOTSTRAP,
     SEMENTE,
     SENSIBILIDADE_MINIMA,
@@ -68,7 +75,7 @@ from metricas import (
     maior_limiar_sensibilidade_minima,
 )
 
-RAIZ_CODIGO = Path(__file__).resolve().parents[1]   # .../TCC-Ultrassom/03-codigo
+RAIZ_CODIGO = Path(__file__).resolve().parents[2]   # .../TCC-Ultrassom/03-codigo
 
 ENTRADA_PREDICOES_BREAST = RAIZ_CODIGO / "resultados" / "breast" / "predicoes_breast.csv"
 ENTRADA_PREDICOES_BUSBRA = RAIZ_CODIGO / "resultados" / "predicoes.csv"

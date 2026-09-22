@@ -34,7 +34,7 @@ Escreve `resultados/breast/predicoes_breast.csv`, uma linha por paciente do BrEa
     y_true, y_score.
 
 Uso:
-    python src/experimento_c.py
+    python src/protocolo_c/experimento_c.py
 """
 
 from __future__ import annotations
@@ -46,13 +46,24 @@ import numpy as np
 import pandas as pd
 
 # Reaproveita a arquitetura do classificador do Protocolo A e as funções de limiar de
-# metricas.py — mesmo diretório src/, ver docstring do módulo. Nenhum dos dois módulos é
-# modificado por este import (os dois só rodam `main()` sob `if __name__ == "__main__"`).
-from experimento import novo_pipeline
-from indexar import exigir
-from metricas import SENSIBILIDADE_MINIMA, limiar_youden, maior_limiar_sensibilidade_minima
+# metricas.py — pacote `src/protocolo_ab/`, ver docstring do módulo. Nenhum dos dois
+# módulos é modificado por este import (os dois só rodam `main()` sob
+# `if __name__ == "__main__"`).
+#
+# Desde a reorganização de src/ por trilha (comum/, protocolo_ab/, protocolo_c/,
+# resnet/), os módulos reaproveitados ficam em outro pacote: `src/` entra no sys.path
+# para que o(s) import(s) abaixo funcionem rodando o script direto, de qualquer
+# diretório. Só muda onde o Python procura o módulo — nenhuma lógica é alterada.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # .../03-codigo/src
+from comum.indexar import exigir
+from protocolo_ab.experimento import novo_pipeline
+from protocolo_ab.metricas import (
+    SENSIBILIDADE_MINIMA,
+    limiar_youden,
+    maior_limiar_sensibilidade_minima,
+)
 
-RAIZ_CODIGO = Path(__file__).resolve().parents[1]   # .../TCC-Ultrassom/03-codigo
+RAIZ_CODIGO = Path(__file__).resolve().parents[2]   # .../TCC-Ultrassom/03-codigo
 
 ENTRADA_MATRIZ_BUSBRA = RAIZ_CODIGO / "dados_processados" / "caracteristicas.npy"
 ENTRADA_IDS_BUSBRA = RAIZ_CODIGO / "dados_processados" / "caracteristicas_ids.csv"

@@ -81,7 +81,7 @@ Se nem o download normal nem o espelho local (baixado manualmente uma vez para
 disponíveis, o script trava com uma mensagem explicando as duas opções.
 
 Uso:
-    python src/features_resnet.py
+    python src/resnet/features_resnet.py
 """
 
 from __future__ import annotations
@@ -103,7 +103,7 @@ from torchvision.models import ResNet18_Weights
 # Caminhos -- tudo derivado da posição deste arquivo (ver indexar.py).
 # ---------------------------------------------------------------------------
 
-RAIZ_CODIGO = Path(__file__).resolve().parents[1]   # .../TCC-Ultrassom/03-codigo
+RAIZ_CODIGO = Path(__file__).resolve().parents[2]   # .../TCC-Ultrassom/03-codigo
 RAIZ_TCC = RAIZ_CODIGO.parent                       # .../TCC-Ultrassom
 
 ENTRADA = RAIZ_CODIGO / "dados_processados" / "indice_particionado.csv"

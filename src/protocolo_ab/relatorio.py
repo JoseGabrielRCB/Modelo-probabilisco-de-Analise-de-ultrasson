@@ -11,7 +11,7 @@ Escreve `resultados/curva_roc.png`: a curva ROC do Protocolo A / paciente, com o
 pontos de operação marcados e uma legenda.
 
 Uso:
-    python src/relatorio.py
+    python src/protocolo_ab/relatorio.py
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ import pandas as pd
 # Caminhos — tudo derivado da posição deste arquivo (ver indexar.py).
 # ---------------------------------------------------------------------------
 
-RAIZ_CODIGO = Path(__file__).resolve().parents[1]   # .../TCC-Ultrassom/03-codigo
+RAIZ_CODIGO = Path(__file__).resolve().parents[2]   # .../TCC-Ultrassom/03-codigo
 
 ENTRADA_MD = RAIZ_CODIGO / "resultados" / "metricas.md"
 ENTRADA_ROC = RAIZ_CODIGO / "resultados" / "roc.csv"

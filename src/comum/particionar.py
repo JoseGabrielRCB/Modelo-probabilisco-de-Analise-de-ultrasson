@@ -14,7 +14,7 @@ A partir desta etapa, nenhum script seguinte (`verificar.py`, `features.py`,
 `indice_particionado.csv`.
 
 Uso:
-    python src/particionar.py
+    python src/comum/particionar.py
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ import pandas as pd
 # Caminhos — tudo derivado da posição deste arquivo (ver indexar.py).
 # ---------------------------------------------------------------------------
 
-RAIZ_CODIGO = Path(__file__).resolve().parents[1]   # .../TCC-Ultrassom/03-codigo
+RAIZ_CODIGO = Path(__file__).resolve().parents[2]   # .../TCC-Ultrassom/03-codigo
 RAIZ_TCC = RAIZ_CODIGO.parent                       # .../TCC-Ultrassom
 
 ENTRADA_INDICE = RAIZ_CODIGO / "dados_processados" / "indice.csv"

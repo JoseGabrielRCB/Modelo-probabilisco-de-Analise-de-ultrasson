@@ -37,7 +37,7 @@ Escreve dois arquivos, alinhados linha a linha na mesma ordem:
       matriz pertence.
 
 Uso:
-    python src/features.py
+    python src/comum/features.py
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ from skimage.filters import sobel
 # Caminhos — tudo derivado da posição deste arquivo (ver indexar.py).
 # ---------------------------------------------------------------------------
 
-RAIZ_CODIGO = Path(__file__).resolve().parents[1]   # .../TCC-Ultrassom/03-codigo
+RAIZ_CODIGO = Path(__file__).resolve().parents[2]   # .../TCC-Ultrassom/03-codigo
 RAIZ_TCC = RAIZ_CODIGO.parent                       # .../TCC-Ultrassom
 
 ENTRADA = RAIZ_CODIGO / "dados_processados" / "indice_particionado.csv"

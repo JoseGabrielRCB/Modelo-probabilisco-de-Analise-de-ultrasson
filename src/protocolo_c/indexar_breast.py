@@ -38,7 +38,7 @@ A partir daqui, nenhum outro script do Protocolo C (`verificar_breast.py`,
 `indice_breast.csv`.
 
 Uso:
-    python src/indexar_breast.py
+    python src/protocolo_c/indexar_breast.py
 """
 
 from __future__ import annotations
@@ -49,15 +49,22 @@ from pathlib import Path
 import pandas as pd
 from PIL import Image
 
-# Reaproveita o esquema comum e as funções utilitárias do BUS-BRA — mesmo diretório
-# src/, ver docstring do módulo. `indexar.py` não é modificado por este import.
-from indexar import COLUNAS, exigir, sha1_do_arquivo
+# Reaproveita o esquema comum e as funções utilitárias do BUS-BRA — pacote
+# `src/comum/`, ver docstring do módulo. `indexar.py` não é modificado por este
+# import.
+#
+# Desde a reorganização de src/ por trilha (comum/, protocolo_ab/, protocolo_c/,
+# resnet/), os módulos reaproveitados ficam em outro pacote: `src/` entra no sys.path
+# para que o(s) import(s) abaixo funcionem rodando o script direto, de qualquer
+# diretório. Só muda onde o Python procura o módulo — nenhuma lógica é alterada.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # .../03-codigo/src
+from comum.indexar import COLUNAS, exigir, sha1_do_arquivo
 
 # ---------------------------------------------------------------------------
 # Caminhos — tudo derivado da posição deste arquivo (ver indexar.py).
 # ---------------------------------------------------------------------------
 
-RAIZ_CODIGO = Path(__file__).resolve().parents[1]   # .../TCC-Ultrassom/03-codigo
+RAIZ_CODIGO = Path(__file__).resolve().parents[2]   # .../TCC-Ultrassom/03-codigo
 RAIZ_TCC = RAIZ_CODIGO.parent                       # .../TCC-Ultrassom
 
 BREAST = Path("01-datasets/BrEaST-Lesions-USG")

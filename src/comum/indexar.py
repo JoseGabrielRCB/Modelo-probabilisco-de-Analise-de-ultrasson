@@ -9,7 +9,7 @@ se um número aparecer errado depois, ou o erro está aqui (montagem do índice)
 na frente — nunca nos dois lugares ao mesmo tempo.
 
 Uso:
-    python src/indexar.py
+    python src/comum/indexar.py
 """
 
 from __future__ import annotations
@@ -20,20 +20,12 @@ from pathlib import Path
 
 import pandas as pd
 
-# ---------------------------------------------------------------------------
-# Caminhos
-#
-# Tudo é derivado da posição deste arquivo, nunca de um caminho absoluto escrito
-# na mão: o script continua funcionando se a pasta for movida ou rodar em outra
-# máquina.
-# ---------------------------------------------------------------------------
 
-RAIZ_CODIGO = Path(__file__).resolve().parents[1]   # .../TCC-Ultrassom/03-codigo
-RAIZ_TCC = RAIZ_CODIGO.parent                       # .../TCC-Ultrassom
+#caminhos
+RAIZ_CODIGO = Path(__file__).resolve().parents[2]
+RAIZ_TCC = RAIZ_CODIGO.parent
 
-# Os caminhos gravados no índice são relativos a RAIZ_TCC (a pasta que contém tanto
-# `01-datasets/` quanto `03-codigo/`). Quem consumir o índice depois deve resolvê-los
-# contra essa mesma raiz.
+
 BUSBRA = Path("01-datasets/BUS-BRA/BUSBRA")
 
 SAIDA = RAIZ_CODIGO / "dados_processados" / "indice.csv"
@@ -43,19 +35,19 @@ SAIDA = RAIZ_CODIGO / "dados_processados" / "indice.csv"
 # ---------------------------------------------------------------------------
 
 COLUNAS = [
-    "base",       # texto  — "bus-bra"; "breast" quando o segundo conjunto entrar
-    "id",         # texto  — identificador da imagem original (ex.: "bus_0001-l"); usado para
+    "base",       #text — "bus-bra"; "breast" quando o segundo conjunto entrar
+    "id",         #text — identificador da imagem original (ex.: "bus_0001-l"); usado para
                   # juntar com o arquivo oficial de folds na Etapa 2 (particionar.py)
     "paciente",   # número — identificador usado no split por paciente (Etapa 2)
-    "imagem",     # texto  — caminho do PNG, relativo a RAIZ_TCC
-    "mascara",    # texto  — caminho da máscara, relativo a RAIZ_TCC
+    "imagem",     #text — caminho do PNG, relativo a RAIZ_TCC
+    "mascara",    #text — caminho da máscara, relativo a RAIZ_TCC
     "rotulo",     # 0 ou 1 — 1 = malignant, 0 = benign
-    "birads",     # texto  — texto de propósito: no BrEaST vem "4a", "4b", ...
-    "aparelho",   # texto  — para a análise por subgrupo, mais para frente
+    "birads",     #text —textde propósito: no BrEaST vem "4a", "4b", ...
+    "aparelho",   #text — para a análise por subgrupo, mais para frente
     "largura",    # número
     "altura",     # número
-    "lado",       # texto  — left / right / single; só carrega a informação adiante
-    "sha1",       # texto  — impressão digital do conteúdo do PNG
+    "lado",       #text — left / right / single; só carrega a informação adiante
+    "sha1",       #text — impressão digital do conteúdo do PNG
 ]
 
 # Tradução do rótulo. O dicionário também serve de lista fechada de valores aceitos:
@@ -189,8 +181,7 @@ def verificar_sanidade(tabela: pd.DataFrame) -> None:
     exigir(
         not duplicados.any(),
         f"{int(duplicados.sum())} imagem(ns) com sha1 repetido (conteúdo idêntico); "
-        "primeiros casos:\n  "
-        + "\n  ".join(tabela.loc[duplicados, "imagem"].head(10)),
+        "primeiros casos:\n  "+ "\n  ".join(tabela.loc[duplicados, "imagem"].head(10)),
     )
 
     vazias = [coluna for coluna in COLUNAS if tabela[coluna].isna().any()]

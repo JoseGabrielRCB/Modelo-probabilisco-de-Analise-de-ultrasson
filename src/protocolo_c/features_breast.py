@@ -20,7 +20,7 @@ como dado de treino) — os dois vetores precisam ter a mesma dimensão para o c
 treinado no BUS-BRA (`experimento_c.py`) poder ser aplicado ao BrEaST sem erro.
 
 Uso:
-    python src/features_breast.py
+    python src/protocolo_c/features_breast.py
 """
 
 from __future__ import annotations
@@ -32,13 +32,19 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# Reaproveita a extração de características do BUS-BRA — mesmo diretório src/, ver
+# Reaproveita a extração de características do BUS-BRA — pacote `src/comum/`, ver
 # docstring do módulo. `features.py` não é modificado por este import.
-from features import TAMANHO, extrair_vetor
-from features import verificar_sanidade as verificar_sanidade_matriz
-from indexar import exigir
+#
+# Desde a reorganização de src/ por trilha (comum/, protocolo_ab/, protocolo_c/,
+# resnet/), os módulos reaproveitados ficam em outro pacote: `src/` entra no sys.path
+# para que o(s) import(s) abaixo funcionem rodando o script direto, de qualquer
+# diretório. Só muda onde o Python procura o módulo — nenhuma lógica é alterada.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # .../03-codigo/src
+from comum.features import TAMANHO, extrair_vetor
+from comum.features import verificar_sanidade as verificar_sanidade_matriz
+from comum.indexar import exigir
 
-RAIZ_CODIGO = Path(__file__).resolve().parents[1]   # .../TCC-Ultrassom/03-codigo
+RAIZ_CODIGO = Path(__file__).resolve().parents[2]   # .../TCC-Ultrassom/03-codigo
 RAIZ_TCC = RAIZ_CODIGO.parent                       # .../TCC-Ultrassom
 
 ENTRADA = RAIZ_CODIGO / "dados_processados" / "breast" / "indice_breast.csv"

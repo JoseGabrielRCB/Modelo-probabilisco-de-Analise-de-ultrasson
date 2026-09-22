@@ -1,52 +1,25 @@
-"""Etapa 6 do pipeline: calcula as métricas finais a partir de `resultados/predicoes.csv`.
+"""Etapa 6 do caminho ResNet18: calcula as métricas finais a partir de
+`resultados/predicoes_resnet.csv`.
 
-Lê só `predicoes.csv` (saída de `experimento.py`) — nunca recalcula predições aqui, esse
-script só mede o que já foi predito. Para cada combinação de `protocolo` + `unidade`
-presente no arquivo (ex.: A/imagem, A/paciente, B/imagem), calcula:
+Cópia adaptada de `metricas.py` (caminho clássico) -- MESMA lógica (mesmo bootstrap por
+paciente, mesmos limiares fora-de-fold, mesmo critério de sanidade), único ponto que
+muda é a fonte (`predicoes_resnet.csv` em vez de `predicoes.csv`) e os arquivos de saída
+(`metricas_resnet.md` / `roc_resnet.csv`, nunca `metricas.md` / `roc.csv`, para não
+sobrescrever o resultado clássico já verificado). Ver `metricas.py` para a documentação
+completa do método -- não repetida aqui em detalhe para não divergir das duas cópias com
+o tempo; qualquer mudança de fundo no método deve ser espelhada manualmente nos dois
+arquivos.
 
-    - AUROC e AUPRC, com intervalo de confiança de 95% por bootstrap (1.000 repetições,
-      reamostrando PACIENTES, não linhas soltas — ver `metricas_de_um_combo`);
-    - no limiar fixo 0,5 (sem otimização nenhuma): sensibilidade, especificidade,
-      acurácia e matriz de confusão, todos com IC95% pelo mesmo bootstrap;
-    - dois pontos de operação adicionais — limiar de Youden e o maior limiar com
-      sensibilidade >= 0,90 — escolhidos SEM olhar o fold de teste atual (ver a seção
-      "Limiares fora-de-fold" abaixo para o porquê e o como).
+Para cada combinação de `protocolo` + `unidade` presente no arquivo, calcula AUROC e
+AUPRC com IC95% por bootstrap (1.000 repetições, reamostrando pacientes), e no limiar
+fixo 0,5 mais os limiares de Youden e sensibilidade>=0,90 (escolhidos fora de fold).
 
 Escreve:
-    - `resultados/metricas.md`   — tabela legível, pronta para colar no TCC. Termina com
-      um bloco de dados de máquina (comentário HTML) que `relatorio.py` usa para marcar
-      os pontos de operação na curva ROC — ver a seção "Bloco de dados de máquina".
-    - `resultados/roc.csv`      — pontos da curva ROC (fpr, tpr, limiar) de cada combo.
-
-Critério de sanidade (só avisa, não trava): se a acurácia do Protocolo A por paciente, no
-limiar 0,5, passar de 0,95, um aviso bem visível é impresso — não é necessariamente um
-erro, mas é raro o bastante para merecer desconfiança do particionamento.
-
-## Limiares fora-de-fold
-
-Cada linha de `predicoes.csv` já traz uma predição fora-de-amostra (`y_score` foi gerado
-por um modelo que nunca viu aquela linha durante o treino — ver `experimento.py`). Mas
-escolher um limiar de decisão (Youden, sensibilidade >= 0,90) olhando para o próprio
-conjunto de teste onde ele será aplicado ainda vazaria informação: o limiar em si teria
-sido otimizado nos mesmos dados em que é avaliado.
-
-A solução usada aqui: para cada fold `f`, o limiar aplicado às linhas do fold `f` é
-escolhido usando só as predições fora-de-fold das linhas dos OUTROS 4 folds (que, por sua
-vez, já eram fora-de-amostra para o modelo que as gerou). Assim, nenhuma linha jamais
-"vê" o limiar que vai decidi-la. Isso produz um limiar (levemente) diferente por fold — o
-que é o comportamento correto, não um efeito colateral a esconder.
-
-## Bloco de dados de máquina
-
-`relatorio.py` (Etapa 7) precisa saber, para o combo Protocolo A / paciente, em que ponto
-(fpr, tpr) marcar cada um dos três limiares em cima da curva ROC — mas o contrato dele é
-ler só `metricas.md` e `roc.csv`, não recalcular nada de `predicoes.csv`. Para não obrigar
-`relatorio.py` a fazer parsing frágil de números formatados (vírgula decimal, tabela
-markdown), este script grava, ao final de `metricas.md`, um bloco JSON dentro de um
-comentário HTML — invisível ao renderizar o markdown, mas fácil de extrair com uma regex.
+    - `resultados/metricas_resnet.md`
+    - `resultados/roc_resnet.csv`
 
 Uso:
-    python src/metricas.py
+    python src/resnet/metricas_resnet.py
 """
 
 from __future__ import annotations
@@ -68,19 +41,19 @@ from sklearn.metrics import (
 )
 
 # ---------------------------------------------------------------------------
-# Caminhos — tudo derivado da posição deste arquivo (ver indexar.py).
+# Caminhos -- tudo derivado da posição deste arquivo (ver indexar.py).
 # ---------------------------------------------------------------------------
 
-RAIZ_CODIGO = Path(__file__).resolve().parents[1]   # .../TCC-Ultrassom/03-codigo
+RAIZ_CODIGO = Path(__file__).resolve().parents[2]   # .../TCC-Ultrassom/03-codigo
 
-ENTRADA = RAIZ_CODIGO / "resultados" / "predicoes.csv"
-SAIDA_MD = RAIZ_CODIGO / "resultados" / "metricas.md"
-SAIDA_ROC = RAIZ_CODIGO / "resultados" / "roc.csv"
+ENTRADA = RAIZ_CODIGO / "resultados" / "predicoes_resnet.csv"
+SAIDA_MD = RAIZ_CODIGO / "resultados" / "metricas_resnet.md"
+SAIDA_ROC = RAIZ_CODIGO / "resultados" / "roc_resnet.csv"
 
 SEMENTE = 42
 N_BOOTSTRAP = 1000
 SENSIBILIDADE_MINIMA = 0.90
-LIMIAR_AVISO_ACURACIA = 0.95  # ver "critério de sanidade" no docstring do módulo
+LIMIAR_AVISO_ACURACIA = 0.95  # ver "critério de sanidade" no docstring de metricas.py
 
 
 def exigir(condicao: bool, mensagem: str) -> None:
@@ -90,7 +63,7 @@ def exigir(condicao: bool, mensagem: str) -> None:
 
 
 def ler_predicoes() -> pd.DataFrame:
-    exigir(ENTRADA.exists(), f"não encontrei {ENTRADA}; rode experimento.py antes")
+    exigir(ENTRADA.exists(), f"não encontrei {ENTRADA}; rode experimento_resnet.py antes")
     tabela = pd.read_csv(ENTRADA)
     colunas_esperadas = {
         "protocolo", "unidade", "dataset", "id", "paciente", "fold", "y_true", "y_score",
@@ -128,11 +101,7 @@ def maior_limiar_sensibilidade_minima(
 
 def limiares_fora_de_fold(y_true: np.ndarray, y_score: np.ndarray, fold: np.ndarray):
     """Para cada fold, escolhe os limiares (Youden, sens>=0.90) usando só as predições
-    dos OUTROS folds — ver "Limiares fora-de-fold" no docstring do módulo.
-
-    Devolve dois arrays (mesmo tamanho de y_true) com o limiar aplicado a cada linha, e
-    dois dicionários {fold: limiar} para inspeção/relato.
-    """
+    dos OUTROS folds — ver "Limiares fora-de-fold" no docstring de metricas.py."""
     youden_por_fold: dict[int, float] = {}
     sens90_por_fold: dict[int, float] = {}
     for f in np.unique(fold):
@@ -154,12 +123,7 @@ def gerar_reamostragens_por_paciente(
 ) -> list[np.ndarray]:
     """Gera `n_reps` conjuntos de posições de linha, cada um obtido reamostrando
     PACIENTES com reposição (não linhas soltas) e pegando todas as linhas de cada
-    paciente sorteado.
-
-    Isso preserva a estrutura de cluster dos dados (um paciente pode ter 1 ou 2 imagens):
-    reamostrar linha a linha ignoraria que as duas imagens do mesmo paciente não são
-    observações independentes, e inflaria artificialmente a precisão do intervalo.
-    """
+    paciente sorteado -- ver docstring de metricas.py para a justificativa completa."""
     indices_por_paciente = pd.Series(np.arange(len(paciente))).groupby(paciente).apply(
         lambda s: s.to_numpy()
     )
@@ -175,13 +139,7 @@ def gerar_reamostragens_por_paciente(
 
 
 def ic95_bootstrap(funcao_metrica, reamostragens: list[np.ndarray], *colunas: np.ndarray):
-    """Aplica `funcao_metrica` a cada reamostragem e devolve o percentil [2,5%, 97,5%].
-
-    Repetições em que a reamostragem sorteou só uma classe (raro, mas possível — algumas
-    métricas como AUROC não são definidas nesse caso) são descartadas, não contam como
-    erro; se descartarem demais, isso por si só é um sinal de amostra pequena/desbalanço
-    extremo, e o script trava para não devolver um IC baseado em poucas repetições.
-    """
+    """Aplica `funcao_metrica` a cada reamostragem e devolve o percentil [2,5%, 97,5%]."""
     valores = []
     for posicoes in reamostragens:
         argumentos = [coluna[posicoes] for coluna in colunas]
@@ -254,7 +212,6 @@ def metricas_de_um_combo(df: pd.DataFrame) -> dict:
             "acuracia_ic": acc_ic,
             "tn": int(matriz[0, 0]), "fp": int(matriz[0, 1]),
             "fn": int(matriz[1, 0]), "tp": int(matriz[1, 1]),
-            # ponto (fpr, tpr) para marcar na curva ROC (relatorio.py usa isso)
             "fpr": float(1 - especificidade),
             "tpr": float(sensibilidade),
         }
@@ -281,10 +238,18 @@ def fmt_ic(pontual: float, ic: tuple[float, float], casas: int = 3) -> str:
 
 
 def montar_markdown(resultados: dict[tuple[str, str], dict]) -> str:
-    linhas = ["# Métricas do experimento", ""]
+    linhas = ["# Métricas do experimento — caminho ResNet18 (comparação)", ""]
+    linhas.append(
+        "Características extraídas por `features_resnet.py` (ResNet18 pré-treinada em "
+        "ImageNet, penúltima camada, 512-d) em vez das características clássicas de "
+        "`features.py` -- ver `resultados/metricas.md` para o resultado clássico "
+        "(scikit-image + regressão logística). MESMO classificador, MESMOS folds, MESMA "
+        "semente nos dois caminhos; só a extração de características muda."
+    )
+    linhas.append("")
     linhas.append(
         f"IC95% por bootstrap (n={N_BOOTSTRAP}), reamostrando pacientes — ver "
-        "`metricas.py` para o método completo."
+        "`metricas_resnet.py` (cópia adaptada de `metricas.py`) para o método completo."
     )
     linhas.append("")
 
@@ -300,7 +265,7 @@ def montar_markdown(resultados: dict[tuple[str, str], dict]) -> str:
         linhas.append("")
 
         linhas.append("Pontos de operação (limiares Youden e sensibilidade>=0,90 escolhidos "
-                       "fora de fold — ver docstring do módulo):")
+                       "fora de fold — ver docstring de metricas.py):")
         linhas.append("")
         linhas.append("| ponto | sensibilidade | especificidade | acurácia | TP | TN | FP | FN |")
         linhas.append("|---|---|---|---|---|---|---|---|")
@@ -319,8 +284,8 @@ def montar_markdown(resultados: dict[tuple[str, str], dict]) -> str:
     linhas.append("---")
     linhas.append("")
     linhas.append(
-        "Bloco de dados de máquina para `relatorio.py` (não editar à mão; ver docstring "
-        "de `metricas.py`, seção \"Bloco de dados de máquina\"):"
+        "Bloco de dados de máquina (não editar à mão; mesmo formato de `metricas.py`, "
+        "reservado para uso futuro por um `relatorio_resnet.py`, que não existe ainda):"
     )
     linhas.append("")
     dados_maquina = {
@@ -351,9 +316,7 @@ def montar_roc_csv(tabela: pd.DataFrame, combos: list[tuple[str, str]]) -> pd.Da
 
 def verificar_criterio_de_sanidade(resultados: dict[tuple[str, str], dict]) -> None:
     """Não trava — só avisa bem alto se a acurácia do Protocolo A por paciente (limiar
-    0,5) passar de LIMIAR_AVISO_ACURACIA. Pode ser real (o problema é fácil o bastante em
-    algumas configurações), mas é raro e merece desconfiança do particionamento antes de
-    aceitar o número."""
+    0,5) passar de LIMIAR_AVISO_ACURACIA -- ver docstring de metricas.py."""
     chave = ("A", "paciente")
     if chave not in resultados:
         return
@@ -401,7 +364,6 @@ def main() -> None:
     print(f"\nmétricas salvas em {SAIDA_MD.relative_to(RAIZ_CODIGO.parent).as_posix()}")
     print(f"curva ROC salva em {SAIDA_ROC.relative_to(RAIZ_CODIGO.parent).as_posix()}")
 
-    # resumo direto no terminal — o que mais importa para conferir de olho, sem abrir o md
     for (protocolo, unidade), r in resultados.items():
         print(
             f"  {protocolo}/{unidade}: AUROC={fmt(r['auroc'])} "
