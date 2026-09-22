@@ -1,4 +1,4 @@
-./resultados
-./docs
-./.venv
-./dadosprocessador
+/resultados/
+/docs/
+/.venv/
+/dados_processados/
