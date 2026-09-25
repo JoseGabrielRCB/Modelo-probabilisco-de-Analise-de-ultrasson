@@ -1,16 +1,16 @@
-"""Etapa 2 do pipeline: atribui cada imagem do índice a um dos 5 folds oficiais do BUS-BRA.
+"""Etapa 2 do pipeline: atribui cada imagem do indice a um dos 5 folds oficiais do BUS-BRA.
 
-Lê `dados_processados/indice.csv` (saída da Etapa 1) e o arquivo oficial de folds,
-distribuído pelos próprios autores do dataset, `01-datasets/BUS-BRA/BUSBRA/5-fold-cv.csv`.
+Le `dados_processados/indice.csv` (saida da Etapa 1) e o arquivo oficial de folds,
+distribuido pelos proprios autores do dataset, `01-datasets/BUS-BRA/BUSBRA/5-fold-cv.csv`.
 Junta as duas tabelas pela coluna `id` e escreve `dados_processados/indice_particionado.csv`.
 
-Decisão já registrada no projeto: usar os folds oficiais do BUS-BRA, não criar uma
-partição própria — dá comparabilidade direta com o baseline publicado, e uma etapa de
-implementação a menos. O split "por imagem" de propósito (Protocolo B, o experimento de
-vazamento) não entra aqui: fica para o `experimento.py`.
+Decisao ja registrada no projeto: usar os folds oficiais do BUS-BRA, nao criar uma
+particao propria — da comparabilidade direta com o baseline publicado, e uma etapa de
+implementacao a menos. O split "por imagem" de proposito (Protocolo B, o experimento de
+vazamento) nao entra aqui: fica para o `experimento.py`.
 
 A partir desta etapa, nenhum script seguinte (`verificar.py`, `features.py`,
-`experimento.py`...) volta a abrir `5-fold-cv.csv`: todos leem só
+`experimento.py`...) volta a abrir `5-fold-cv.csv`: todos leem so
 `indice_particionado.csv`.
 
 Uso:
@@ -24,9 +24,7 @@ from pathlib import Path
 
 import pandas as pd
 
-# ---------------------------------------------------------------------------
-# Caminhos — tudo derivado da posição deste arquivo (ver indexar.py).
-# ---------------------------------------------------------------------------
+# Caminhos: derivados da posicao deste arquivo (ver indexar.py)
 
 RAIZ_CODIGO = Path(__file__).resolve().parents[2]   # .../TCC-Ultrassom/03-codigo
 RAIZ_TCC = RAIZ_CODIGO.parent                       # .../TCC-Ultrassom
@@ -36,37 +34,25 @@ ENTRADA_FOLDS = RAIZ_TCC / "01-datasets" / "BUS-BRA" / "BUSBRA" / "5-fold-cv.csv
 
 SAIDA = RAIZ_CODIGO / "dados_processados" / "indice_particionado.csv"
 
-# Números conferidos por conferência independente antes deste script existir (ver
-# docs/02-particionar.md, seção 5) — usados como verificação de sanidade.
+# Numeros conferidos antes deste script (docs/02-particionar.md, secao 5), para sanidade
 LINHAS_ESPERADAS = 1875
 CONTAGEM_POR_FOLD_ESPERADA = {1: 376, 2: 385, 3: 366, 4: 365, 5: 383}
 
 
 def exigir(condicao: bool, mensagem: str) -> None:
-    """Trava o script com uma mensagem clara se a condição não valer.
-
-    Mesma função de `indexar.py`: a regra é parar com erro, nunca seguir em frente com
-    dado suspeito.
-    """
+    """Trava o script com mensagem clara se a condicao nao valer."""
     if not condicao:
         raise ValueError(mensagem)
 
 
 def ler_indice() -> pd.DataFrame:
-    """Lê o índice da Etapa 1. A coluna `birads` precisa ser lida como texto — se não for
-    especificada aqui, o pandas infere número e perde o formato (`"4a"` no BrEaST, mais
-    para frente)."""
+    """Le o indice da Etapa 1; `birads` como texto para nao perder formatos como "4a"."""
     exigir(ENTRADA_INDICE.exists(), f"não encontrei {ENTRADA_INDICE}; rode indexar.py antes")
     return pd.read_csv(ENTRADA_INDICE, dtype={"birads": str})
 
 
 def ler_folds_oficiais() -> pd.DataFrame:
-    """Lê o arquivo oficial de folds, mantendo só `ID` e `kFold`.
-
-    As colunas `valid_1`...`valid_5` do arquivo original parecem ser máscaras auxiliares
-    dos autores para outro propósito (validação cruzada aninhada, possivelmente) — não
-    são necessárias para o protocolo deste TCC e são descartadas aqui, de propósito.
-    """
+    """Le o arquivo oficial de folds, mantendo so `ID` e `kFold` (valid_1..valid_5 descartadas)."""
     exigir(ENTRADA_FOLDS.exists(), f"não encontrei {ENTRADA_FOLDS}")
     bruto = pd.read_csv(ENTRADA_FOLDS)
     exigir(
@@ -77,19 +63,18 @@ def ler_folds_oficiais() -> pd.DataFrame:
 
 
 def juntar(indice: pd.DataFrame, folds: pd.DataFrame) -> pd.DataFrame:
-    """Junta o índice com os folds oficiais pela coluna `id`/`ID` e renomeia `kFold` para
-    `fold`."""
+    """Junta indice e folds oficiais pelo `id` e renomeia `kFold` para `fold`."""
     juntado = indice.merge(folds, left_on="id", right_on="ID", how="left")
     juntado = juntado.drop(columns=["ID"]).rename(columns={"kFold": "fold"})
 
-    # A junção não pode ter perdido nem duplicado nenhuma linha do índice original.
+    # A juncao nao pode perder nem duplicar linhas do indice.
     exigir(
         len(juntado) == len(indice),
         f"a junção mudou o número de linhas: {len(indice)} -> {len(juntado)} "
         "(há id duplicado em algum dos dois arquivos)",
     )
 
-    # Nenhum id do índice pode ter ficado sem fold correspondente no arquivo oficial.
+    # Todo id do indice precisa ter fold no arquivo oficial.
     sem_fold = juntado[juntado["fold"].isna()]
     exigir(
         sem_fold.empty,
@@ -103,17 +88,7 @@ def juntar(indice: pd.DataFrame, folds: pd.DataFrame) -> pd.DataFrame:
 
 
 def verificar_gate_por_paciente(tabela: pd.DataFrame) -> None:
-    """O "gate" central desta etapa: todas as imagens de um mesmo paciente têm que cair
-    no mesmo fold.
-
-    Se um paciente tiver imagens espalhadas em folds diferentes, treinar num fold e
-    testar noutro vazaria informação do mesmo paciente entre treino e teste — o próprio
-    tipo de vazamento que o Protocolo B (proposital, em experimento.py) existe para
-    medir. Aqui, no particionamento oficial, isso não pode acontecer OU o arquivo oficial
-    de folds já parte do princípio de não misturar pacientes entre folds — auditar essa
-    suposição, em vez de confiar cegamente nela, é o argumento de rigor metodológico
-    central deste TCC.
-    """
+    """Gate central: todas as imagens de um paciente devem cair no mesmo fold (sem vazamento)."""
     folds_por_paciente = tabela.groupby("paciente")["fold"].nunique()
     pacientes_com_mais_de_um_fold = folds_por_paciente[folds_por_paciente > 1]
     exigir(
@@ -125,8 +100,7 @@ def verificar_gate_por_paciente(tabela: pd.DataFrame) -> None:
 
 
 def verificar_sanidade(tabela: pd.DataFrame) -> None:
-    """Confere o resultado contra os números já conferidos antes de salvar (ver
-    docs/02-particionar.md, seção 5)."""
+    """Confere o resultado contra os numeros esperados (docs/02-particionar.md, secao 5)."""
     exigir(
         len(tabela) == LINHAS_ESPERADAS,
         f"esperava {LINHAS_ESPERADAS} linhas, encontrei {len(tabela)}",
@@ -148,11 +122,10 @@ def numero(valor: int) -> str:
 
 
 def resumir(tabela: pd.DataFrame) -> None:
-    """Imprime o resumo que entra na seção de Materiais e Métodos."""
-    print(f"{numero(len(tabela))} imagens particionadas em 5 folds oficiais:")
+    """Imprime o resumo usado em Materiais e Metodos."""
+    print(f"{numero(len(tabela))} imagens em 5 folds:")
     for fold, quantidade in sorted(tabela["fold"].value_counts().items()):
         print(f"  fold {fold}: {numero(int(quantidade))} imagens")
-    print("0 pacientes com imagens em mais de um fold (gate verificado).")
 
 
 def main() -> None:
@@ -165,17 +138,18 @@ def main() -> None:
     SAIDA.parent.mkdir(parents=True, exist_ok=True)
     juntado.to_csv(SAIDA, index=False)
 
-    print(f"índice particionado salvo em {SAIDA.relative_to(RAIZ_TCC).as_posix()}")
+    print(f"indice particionado salvo em {SAIDA.relative_to(RAIZ_TCC).as_posix()}")
     resumir(juntado)
 
 
 if __name__ == "__main__":
-    # O console do Windows costuma abrir em cp1252 e comeria os acentos das mensagens.
+    # Console do Windows abre em cp1252; forca UTF-8 para nao perder acentos
     for fluxo in (sys.stdout, sys.stderr):
         fluxo.reconfigure(encoding="utf-8", errors="replace")
 
     try:
         main()
     except ValueError as erro:
+        # Usar esse metodo é um pouco estranho , mas foi nescessario para poder validar um erro ocorrido e tambem por questao de docuemntao
         print(f"ERRO: {erro}", file=sys.stderr)
         sys.exit(1)

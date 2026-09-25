@@ -1,11 +1,11 @@
-"""Etapa 1 do pipeline: monta o índice único do projeto a partir dos dados brutos.
+"""Etapa 1 do pipeline: monta o indice unico do projeto a partir dos dados brutos.
 
-Lê apenas os arquivos brutos do BUS-BRA (`bus_data.csv`, `Images/`, `Masks/`) e escreve
-um único arquivo, `dados_processados/indice.csv`, no esquema comum descrito abaixo.
+Le apenas os arquivos brutos do BUS-BRA (`bus_data.csv`, `Images/`, `Masks/`) e escreve
+um unico arquivo, `dados_processados/indice.csv`, no esquema comum descrito abaixo.
 
 A partir daqui, nenhum outro script do projeto (`particionar.py`, `features.py`,
-`experimento.py`...) volta a abrir os dados brutos: todos leem só o `indice.csv`. Assim,
-se um número aparecer errado depois, ou o erro está aqui (montagem do índice) ou está lá
+`experimento.py`...) volta a abrir os dados brutos: todos leem so o `indice.csv`. Assim,
+se um numero aparecer errado depois, ou o erro esta aqui (montagem do indice) ou esta la
 na frente — nunca nos dois lugares ao mesmo tempo.
 
 Uso:
@@ -21,7 +21,7 @@ from pathlib import Path
 import pandas as pd
 
 
-#caminhos
+# Caminhos
 RAIZ_CODIGO = Path(__file__).resolve().parents[2]
 RAIZ_TCC = RAIZ_CODIGO.parent
 
@@ -30,74 +30,51 @@ BUSBRA = Path("01-datasets/BUS-BRA/BUSBRA")
 
 SAIDA = RAIZ_CODIGO / "dados_processados" / "indice.csv"
 
-# ---------------------------------------------------------------------------
-# Esquema comum de saída (o BrEaST, quando entrar, devolve exatamente estas colunas)
-# ---------------------------------------------------------------------------
+# Esquema comum de saida (o BrEaST usa as mesmas colunas)
 
 COLUNAS = [
-    "base",       #text — "bus-bra"; "breast" quando o segundo conjunto entrar
-    "id",         #text — identificador da imagem original (ex.: "bus_0001-l"); usado para
-                  # juntar com o arquivo oficial de folds na Etapa 2 (particionar.py)
-    "paciente",   # número — identificador usado no split por paciente (Etapa 2)
-    "imagem",     #text — caminho do PNG, relativo a RAIZ_TCC
-    "mascara",    #text — caminho da máscara, relativo a RAIZ_TCC
-    "rotulo",     # 0 ou 1 — 1 = malignant, 0 = benign
-    "birads",     #text —textde propósito: no BrEaST vem "4a", "4b", ...
-    "aparelho",   #text — para a análise por subgrupo, mais para frente
-    "largura",    # número
-    "altura",     # número
-    "lado",       #text — left / right / single; só carrega a informação adiante
-    "sha1",       #text — impressão digital do conteúdo do PNG
+    "base",       # texto: "bus-bra" ou "breast"
+    "id",         # texto: id da imagem original (ex.: "bus_0001-l"), junta com os folds
+    "paciente",   # numero: id usado no split por paciente (Etapa 2)
+    "imagem",     # texto: caminho do PNG, relativo a RAIZ_TCC
+    "mascara",    # texto: caminho da mascara, relativo a RAIZ_TCC
+    "rotulo",     # 0 ou 1: 1 = malignant, 0 = benign
+    "birads",     # texto de proposito: no BrEaST vem "4a", "4b", ...
+    "aparelho",   # texto: para analise por subgrupo
+    "largura",    # numero
+    "altura",     # numero
+    "lado",       # texto: left / right / single
+    "sha1",       # texto: impressao digital do conteudo do PNG
 ]
 
-# Tradução do rótulo. O dicionário também serve de lista fechada de valores aceitos:
-# qualquer outro valor na coluna `Pathology` faz o script travar.
+# Traducao do rotulo; qualquer outro valor em `Pathology` trava o script
 ROTULO_BUSBRA = {"benign": 0, "malignant": 1}
 
-# Números conferidos no conjunto bruto, usados como verificação de sanidade.
+# Numeros conferidos no conjunto bruto (verificacao de sanidade)
 LINHAS_ESPERADAS = 1875
 PACIENTES_ESPERADOS = 1064
 
 
 def exigir(condicao: bool, mensagem: str) -> None:
-    """Trava o script com uma mensagem clara se a condição não valer.
-
-    Toda verificação do script passa por aqui: a regra é parar com erro, nunca pular
-    a linha problemática em silêncio e seguir em frente.
-    """
+    """Trava o script com mensagem clara se a condicao nao valer."""
     if not condicao:
         raise ValueError(mensagem)
 
 
 def sha1_do_arquivo(caminho: Path) -> str:
-    """Impressão digital do conteúdo do arquivo.
-
-    Não é sobre segurança: dois arquivos com o mesmo hash são byte a byte idênticos,
-    o que permite achar imagens duplicadas depois, de graça.
-    """
+    """Hash do conteudo do arquivo; hashes iguais indicam imagens duplicadas."""
     return hashlib.sha1(caminho.read_bytes()).hexdigest()
 
 
 def ler_bus_bra() -> pd.DataFrame:
-    """Lê o BUS-BRA bruto e devolve a tabela já no esquema comum (COLUNAS).
-
-    Esta função é o modelo para a futura `ler_breast()`: toda particularidade do
-    conjunto (nome das colunas, convenção dos nomes de arquivo, valores do rótulo) fica
-    contida aqui; o resto do script não sabe de que conjunto veio a tabela.
-    """
+    """Le o BUS-BRA bruto e devolve a tabela no esquema comum (COLUNAS)."""
     caminho_csv = RAIZ_TCC / BUSBRA / "bus_data.csv"
     exigir(caminho_csv.exists(), f"não encontrei o CSV bruto em {caminho_csv}")
 
-    # BIRADS entra como texto de propósito (ver COLUNAS).
+    # BIRADS entra como texto de proposito (ver COLUNAS).
     bruto = pd.read_csv(caminho_csv, dtype={"BIRADS": str})
 
-    # --- caminhos dos arquivos ---------------------------------------------------
-    # As imagens seguem o ID direto:         bus_0001-l -> Images/bus_0001-l.png
-    # As máscaras NÃO seguem o mesmo padrão: o prefixo `bus_` vira `mask_`
-    #                                        bus_0001-l -> Masks/mask_0001-l.png
-    # Reusar o ID para montar o nome da máscara procuraria um arquivo inexistente;
-    # pior, uma convenção errada aqui associaria em silêncio a máscara de um paciente
-    # à imagem de outro.
+    # Imagem: bus_0001-l -> Images/bus_0001-l.png; mascara: bus_0001-l -> Masks/mask_0001-l.png
     ids = bruto["ID"].astype(str)
     fora_do_padrao = ids[~ids.str.startswith("bus_")]
     exigir(
@@ -111,10 +88,7 @@ def ler_bus_bra() -> pd.DataFrame:
         lambda i: (BUSBRA / "Masks" / f"mask_{i.removeprefix('bus_')}.png").as_posix()
     )
 
-    # --- os arquivos existem mesmo no disco? -------------------------------------
-    # Parece exagero para 1.875 imagens que já sabemos que batem, mas é o mesmo
-    # princípio do `verificar.py` da Etapa 3 — e o TCC inteiro é sobre como esse tipo
-    # de verificação costuma faltar na área.
+    # Confere se os arquivos existem no disco (mesmo principio do verificar.py)
     faltando = [
         f"{identificador} -> {relativo}"
         for identificador, relativo in [*zip(ids, imagens), *zip(ids, mascaras)]
@@ -126,11 +100,7 @@ def ler_bus_bra() -> pd.DataFrame:
         + "\n  ".join(faltando[:10]),
     )
 
-    # --- rótulo -------------------------------------------------------------------
-    # Além de traduzir, conferir que só os dois valores conhecidos aparecem. Parece
-    # redundante aqui, mas é essa verificação que vai obrigar a decidir explicitamente
-    # o que fazer com o terceiro valor do BrEaST (`normal`), em vez de deixá-lo vazar
-    # para dentro do treino sem querer.
+    # Rotulo: so aceita os dois valores conhecidos (o BrEaST tem um terceiro, `normal`)
     exigir(
         bruto["Pathology"].notna().all(),
         "há linhas com Pathology vazio em bus_data.csv",
@@ -161,11 +131,7 @@ def ler_bus_bra() -> pd.DataFrame:
 
 
 def verificar_sanidade(tabela: pd.DataFrame) -> None:
-    """Confere o índice montado antes de salvar qualquer coisa.
-
-    Se algo aqui falhar, nenhum arquivo é escrito: melhor não ter índice do que ter um
-    índice quebrado passando por bom.
-    """
+    """Confere o indice antes de salvar; se falhar, nada e escrito."""
     exigir(
         len(tabela) == LINHAS_ESPERADAS,
         f"esperava {LINHAS_ESPERADAS} linhas, encontrei {len(tabela)}",
@@ -194,7 +160,7 @@ def numero(valor: int) -> str:
 
 
 def resumir(tabela: pd.DataFrame) -> None:
-    """Imprime as contagens que entram na seção de Materiais e Métodos."""
+    """Imprime as contagens usadas em Materiais e Metodos."""
     for base, parte in tabela.groupby("base", sort=True):
         malignas = int(parte["rotulo"].sum())
         proporcao = f"{100 * malignas / len(parte):.1f}".replace(".", ",")
@@ -212,17 +178,18 @@ def main() -> None:
     SAIDA.parent.mkdir(parents=True, exist_ok=True)
     tabela.to_csv(SAIDA, index=False)
 
-    print(f"índice salvo em {SAIDA.relative_to(RAIZ_TCC).as_posix()}")
+    print(f"indice salvo em {SAIDA.relative_to(RAIZ_TCC).as_posix()}")
     resumir(tabela)
 
 
 if __name__ == "__main__":
-    # O console do Windows costuma abrir em cp1252 e comeria os acentos das mensagens.
+    # Console do Windows abre em cp1252; forca UTF-8 para nao perder acentos
     for fluxo in (sys.stdout, sys.stderr):
         fluxo.reconfigure(encoding="utf-8", errors="replace")
 
     try:
         main()
     except ValueError as erro:
+        # Usar esse metodo é um pouco estranho , mas foi nescessario para poder validar um erro ocorrido e tambem por questao de docuemntao
         print(f"ERRO: {erro}", file=sys.stderr)
         sys.exit(1)

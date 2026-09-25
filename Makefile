@@ -83,12 +83,12 @@ $(DADOS)/caracteristicas_resnet.npy: $(DADOS)/indice_particionado.csv src/resnet
 
 experimento_resnet: $(RESULTADOS)/predicoes_resnet.csv
 
-$(RESULTADOS)/predicoes_resnet.csv: $(DADOS)/caracteristicas_resnet.npy src/resnet/experimento_resnet.py
+$(RESULTADOS)/predicoes_resnet.csv: $(DADOS)/caracteristicas_resnet.npy src/resnet/experimento_resnet.py src/protocolo_ab/experimento.py
 	$(PYTHON) src/resnet/experimento_resnet.py
 
 metricas_resnet: $(RESULTADOS)/metricas_resnet.md
 
-$(RESULTADOS)/metricas_resnet.md: $(RESULTADOS)/predicoes_resnet.csv src/resnet/metricas_resnet.py
+$(RESULTADOS)/metricas_resnet.md: $(RESULTADOS)/predicoes_resnet.csv src/resnet/metricas_resnet.py src/protocolo_ab/metricas.py
 	$(PYTHON) src/resnet/metricas_resnet.py
 
 # Mesma ordem-por-lista do `all` classico, mesmo motivo (verificar.py precisa rodar
@@ -127,12 +127,12 @@ verificar_breast: $(DADOS)/breast/indice_breast.csv
 
 features_breast: $(DADOS)/breast/caracteristicas_breast.npy
 
-$(DADOS)/breast/caracteristicas_breast.npy: $(DADOS)/breast/indice_breast.csv src/protocolo_c/features_breast.py src/comum/features.py $(DADOS)/caracteristicas.npy
+$(DADOS)/breast/caracteristicas_breast.npy: $(DADOS)/breast/indice_breast.csv src/protocolo_c/features_breast.py src/comum/features.py
 	$(PYTHON) src/protocolo_c/features_breast.py
 
 experimento_c: $(RESULTADOS)/breast/predicoes_breast.csv
 
-$(RESULTADOS)/breast/predicoes_breast.csv: $(DADOS)/caracteristicas.npy $(DADOS)/breast/caracteristicas_breast.npy $(RESULTADOS)/predicoes.csv src/protocolo_c/experimento_c.py src/protocolo_ab/experimento.py src/protocolo_ab/metricas.py
+$(RESULTADOS)/breast/predicoes_breast.csv: $(DADOS)/caracteristicas.npy $(DADOS)/breast/caracteristicas_breast.npy src/protocolo_c/experimento_c.py src/protocolo_ab/experimento.py
 	$(PYTHON) src/protocolo_c/experimento_c.py
 
 metricas_breast: $(RESULTADOS)/breast/metricas_breast.md
@@ -142,7 +142,7 @@ $(RESULTADOS)/breast/metricas_breast.md: $(RESULTADOS)/breast/predicoes_breast.c
 
 relatorio_breast: $(RESULTADOS)/breast/roc_breast.png
 
-$(RESULTADOS)/breast/roc_breast.png: $(RESULTADOS)/breast/metricas_breast.md src/protocolo_c/relatorio_breast.py
+$(RESULTADOS)/breast/roc_breast.png: $(RESULTADOS)/breast/metricas_breast.md src/protocolo_c/relatorio_breast.py src/protocolo_ab/relatorio.py
 	$(PYTHON) src/protocolo_c/relatorio_breast.py
 
 # Alvo agregador: roda os cinco passos do Protocolo C em sequência (mais relatorio_breast,

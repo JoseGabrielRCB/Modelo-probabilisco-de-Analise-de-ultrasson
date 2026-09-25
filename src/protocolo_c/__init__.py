@@ -1,9 +1,9 @@
-"""Protocolo C — validação externa: treina no BUS-BRA inteiro (sem validação cruzada) e
+"""Protocolo C — validacao externa: treina no BUS-BRA inteiro (sem validacao cruzada) e
 avalia o modelo congelado no BrEaST, que ele nunca viu.
 
-Importa de `comum/` (esquema do índice, extração de características) e de
-`protocolo_ab/` (arquitetura do classificador, funções de limiar) em vez de duplicar
-essa lógica — é o que garante que a comparação interno x externo mede a mesma coisa nas
-duas bases. Nunca escreve em arquivo do BUS-BRA: toda saída fica em
+Importa de `comum/` (esquema do indice, extracao de caracteristicas) e de
+`protocolo_ab/` (arquitetura do classificador, funcoes de limiar) em vez de duplicar
+essa logica — e o que garante que a comparacao interno x externo mede a mesma coisa nas
+duas bases. Nunca escreve em arquivo do BUS-BRA: toda saida fica em
 `dados_processados/breast/` e `resultados/breast/`.
 """

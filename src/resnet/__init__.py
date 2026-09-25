@@ -1,7 +1,7 @@
-"""Trilha alternativa de extração de características: ResNet18 pré-treinada em ImageNet,
-congelada, usada só como extrator (512 características por imagem).
+"""Trilha alternativa de extracao de caracteristicas: ResNet18 pre-treinada em ImageNet,
+congelada, usada so como extrator (512 caracteristicas por imagem).
 
-NÃO é um quarto protocolo: roda os mesmos Protocolos A e B de `protocolo_ab/`, trocando
-só a origem das características. Existe para comparação e escreve em arquivos de nome
-próprio (`*_resnet.*`), nunca por cima do resultado clássico.
+NAO e um quarto protocolo: roda os mesmos Protocolos A e B de `protocolo_ab/`, trocando
+so a origem das caracteristicas. Existe para comparacao e escreve em arquivos de nome
+proprio (`*_resnet.*`), nunca por cima do resultado classico.
 """

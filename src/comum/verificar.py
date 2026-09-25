@@ -1,22 +1,22 @@
-"""Etapa 3 do pipeline: portão de auditoria — confere `indice_particionado.csv` contra os
+"""Etapa 3 do pipeline: portao de auditoria — confere `indice_particionado.csv` contra os
 arquivos de origem, em vez de confiar cegamente neles.
 
-Este é o script standalone que sustenta o argumento central de rigor metodológico do TCC:
-comparar o que o índice diz com o que está de fato no disco, e travar com um erro claro se
-algo não bater. Pode ser executado a qualquer momento, sozinho, sem precisar rodar os
-outros scripts do pipeline antes (só precisa que `indice_particionado.csv` já exista) e
+Este e o script standalone que sustenta o argumento central de rigor metodologico do TCC:
+comparar o que o indice diz com o que esta de fato no disco, e travar com um erro claro se
+algo nao bater. Pode ser executado a qualquer momento, sozinho, sem precisar rodar os
+outros scripts do pipeline antes (so precisa que `indice_particionado.csv` ja exista) e
 sem precisar de GPU.
 
-Verificações que travam a execução se falharem:
+Verificacoes que travam a execucao se falharem:
     (a) nenhum paciente aparece em mais de um fold;
     (b) nenhum sha1 duplicado;
-    (c) toda imagem tem uma máscara correspondente no disco, e as dimensões da máscara
-        batem com as dimensões da IMAGEM — ambas lidas do arquivo real com PIL, nunca
+    (c) toda imagem tem uma mascara correspondente no disco, e as dimensoes da mascara
+        batem com as dimensoes da IMAGEM — ambas lidas do arquivo real com PIL, nunca
         da metadata declarada em `largura`/`altura` (ver nota de auditoria em
         `verificar_mascaras`, achado real em bus_data.csv).
 
-Verificação que só reporta (não trava):
-    (d) balanço de classes (proporção de malignas) por fold.
+Verificacao que so reporta (nao trava):
+    (d) balanco de classes (proporcao de malignas) por fold.
 
 Uso:
     python src/comum/verificar.py
@@ -30,9 +30,7 @@ from pathlib import Path
 import pandas as pd
 from PIL import Image
 
-# ---------------------------------------------------------------------------
-# Caminhos — tudo derivado da posição deste arquivo (ver indexar.py).
-# ---------------------------------------------------------------------------
+# Caminhos: derivados da posicao deste arquivo (ver indexar.py)
 
 RAIZ_CODIGO = Path(__file__).resolve().parents[2]   # .../TCC-Ultrassom/03-codigo
 RAIZ_TCC = RAIZ_CODIGO.parent                       # .../TCC-Ultrassom
@@ -41,11 +39,7 @@ ENTRADA = RAIZ_CODIGO / "dados_processados" / "indice_particionado.csv"
 
 
 def exigir(condicao: bool, mensagem: str) -> None:
-    """Trava o script com uma mensagem clara se a condição não valer.
-
-    Mesma função de `indexar.py`/`particionar.py`: parar com erro, nunca seguir em
-    frente com dado suspeito.
-    """
+    """Trava o script com mensagem clara se a condicao nao valer."""
     if not condicao:
         raise ValueError(mensagem)
 
@@ -59,13 +53,7 @@ def ler_indice_particionado() -> pd.DataFrame:
 
 
 def verificar_paciente_unico_por_fold(tabela: pd.DataFrame) -> None:
-    """(a) Nenhum paciente pode ter imagens em mais de um fold.
-
-    Repete o "gate" já verificado em `particionar.py` — de propósito: este script
-    existe justamente para não depender de que a verificação de outro script tenha
-    corrido, ou tenha corrido corretamente. É a mesma pergunta, feita de novo, de forma
-    independente.
-    """
+    """(a) Nenhum paciente em mais de um fold; repete o gate do particionar.py de forma independente."""
     folds_por_paciente = tabela.groupby("paciente")["fold"].nunique()
     ruins = folds_por_paciente[folds_por_paciente > 1]
     exigir(
@@ -73,11 +61,11 @@ def verificar_paciente_unico_por_fold(tabela: pd.DataFrame) -> None:
         f"(a) FALHOU: {len(ruins)} paciente(s) com imagens em mais de um fold; "
         "primeiros casos:\n  " + "\n  ".join(str(p) for p in ruins.head(10).index),
     )
-    print(f"(a) OK — nenhum dos {tabela['paciente'].nunique()} pacientes cruza fold.")
+    print(f"(a) OK: {tabela['paciente'].nunique()} pacientes, nenhum cruza fold")
 
 
 def verificar_sha1_sem_duplicata(tabela: pd.DataFrame) -> None:
-    """(b) Nenhuma imagem pode ter o mesmo conteúdo (sha1) que outra."""
+    """(b) Nenhuma imagem pode ter o mesmo conteudo (sha1) que outra."""
     duplicados = tabela["sha1"].duplicated(keep=False)
     exigir(
         not duplicados.any(),
@@ -85,31 +73,11 @@ def verificar_sha1_sem_duplicata(tabela: pd.DataFrame) -> None:
         "primeiros casos:\n  "
         + "\n  ".join(tabela.loc[duplicados, "imagem"].head(10)),
     )
-    print(f"(b) OK — nenhum sha1 duplicado entre as {len(tabela)} imagens.")
+    print(f"(b) OK: {len(tabela)} imagens, nenhum sha1 duplicado")
 
 
 def verificar_mascaras(tabela: pd.DataFrame) -> None:
-    """(c) Toda imagem tem uma máscara correspondente no disco, e as dimensões da
-    máscara batem com as dimensões da IMAGEM — as duas lidas do arquivo real com PIL,
-    nunca contra as colunas `largura`/`altura` do índice (que só refletem o que
-    `bus_data.csv` declarou, e podem estar erradas — ver nota de auditoria abaixo).
-
-    Não basta a máscara existir: se as dimensões não baterem, a máscara pode ter vindo
-    trocada, ou redimensionada por engano em algum passo anterior — um erro silencioso
-    que só aparece se alguém de fato abrir os dois arquivos e medir.
-
-    Nota de auditoria (achado real, não hipotético): a primeira versão deste check
-    comparava a máscara contra `largura`/`altura` do índice (ou seja, contra a
-    metadata declarada em `bus_data.csv`) e travava para 4 das 1.875 linhas —
-    bus_0856-l, bus_0857-r, bus_0912-l e bus_0990-l (0,2% dos casos). Investigando,
-    confirmou-se que o campo `Height` de `bus_data.csv` está ERRADO nessas 4 linhas
-    (não bate com o arquivo de imagem real no disco), mas a imagem real e a máscara
-    real CONCORDAM perfeitamente entre si nos 4 casos — não há desalinhamento nenhum
-    entre imagem e máscara, só um erro de metadata no CSV de origem. Por isso o check
-    foi corrigido para comparar máscara-real contra imagem-real (nunca usando a
-    metadata do índice como referência para nenhum dos dois lados) — mais robusto de
-    qualquer forma, porque deixa de depender de a metadata do dataset estar certa.
-    """
+    """(c) Mascara existe e tem a dimensao da imagem, ambas lidas do arquivo (nao da metadata)."""
     problemas: list[str] = []
     for linha in tabela.itertuples(index=False):
         caminho_imagem = RAIZ_TCC / linha.imagem
@@ -138,18 +106,12 @@ def verificar_mascaras(tabela: pd.DataFrame) -> None:
         f"(c) FALHOU: {len(problemas)} problema(s) de máscara; primeiros casos:\n  "
         + "\n  ".join(problemas[:10]),
     )
-    print(f"(c) OK — todas as {len(tabela)} máscaras batem em dimensão com a imagem real "
-          "(comparação arquivo-a-arquivo, não contra metadata declarada).")
+    print(f"(c) OK: {len(tabela)} mascaras com a mesma dimensao da imagem")
 
 
 def reportar_balanco_por_fold(tabela: pd.DataFrame) -> None:
-    """(d) Só reporta, não trava: balanço de classes (proporção de malignas) por fold.
-
-    Um fold muito desbalanceado em relação aos outros não é necessariamente um erro
-    (os folds são os oficiais do dataset, não escolhidos por nós), mas é informação
-    relevante para interpretar os resultados por fold no Protocolo A.
-    """
-    print("(d) balanço de classes por fold (informativo, não é critério de falha):")
+    """(d) So reporta (nao trava): proporcao de malignas por fold."""
+    print("(d) classes por fold (informativo):")
     for fold, parte in tabela.groupby("fold", sort=True):
         malignas = int(parte["rotulo"].sum())
         proporcao = f"{100 * malignas / len(parte):.1f}".replace(".", ",")
@@ -166,16 +128,17 @@ def main() -> None:
     verificar_mascaras(tabela)
     reportar_balanco_por_fold(tabela)
 
-    print("\nverificação completa: todos os portões (a)-(c) passaram.")
+    print("\nverificacao OK: (a), (b) e (c) passaram")
 
 
 if __name__ == "__main__":
-    # O console do Windows costuma abrir em cp1252 e comeria os acentos das mensagens.
+    # Console do Windows abre em cp1252; forca UTF-8 para nao perder acentos
     for fluxo in (sys.stdout, sys.stderr):
         fluxo.reconfigure(encoding="utf-8", errors="replace")
 
     try:
         main()
     except ValueError as erro:
+        # Usar esse metodo é um pouco estranho , mas foi nescessario para poder validar um erro ocorrido e tambem por questao de docuemntao
         print(f"ERRO: {erro}", file=sys.stderr)
         sys.exit(1)
